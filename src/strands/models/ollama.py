@@ -319,6 +319,7 @@ class OllamaModel(Model):
         yield self.format_chunk({"chunk_type": "message_start"})
         yield self.format_chunk({"chunk_type": "content_start", "data_type": "text"})
 
+        event = None
         async for event in response:
             for tool_call in event.message.tool_calls or []:
                 yield self.format_chunk({"chunk_type": "content_start", "data_type": "tool", "data": tool_call})
@@ -329,10 +330,11 @@ class OllamaModel(Model):
             yield self.format_chunk({"chunk_type": "content_delta", "data_type": "text", "data": event.message.content})
 
         yield self.format_chunk({"chunk_type": "content_stop", "data_type": "text"})
-        yield self.format_chunk(
-            {"chunk_type": "message_stop", "data": "tool_use" if tool_requested else event.done_reason}
-        )
-        yield self.format_chunk({"chunk_type": "metadata", "data": event})
+        if event:
+            yield self.format_chunk(
+                {"chunk_type": "message_stop", "data": "tool_use" if tool_requested else event.done_reason}
+            )
+            yield self.format_chunk({"chunk_type": "metadata", "data": event})
 
         logger.debug("finished streaming response from model")
 
